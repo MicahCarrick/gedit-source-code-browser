@@ -35,6 +35,8 @@ class SourceTree(Gtk.VBox):
                 self._log.warn("Could not load pixbuf for icon '%s': %s", 
                                icon_name, 
                                str(e))
+                self._pixbufs[icon_name] = GdkPixbuf.Pixbuf.new_from_file(
+                                            os.path.join(ICON_DIR, "missing-image.png"))
         return self._pixbufs[icon_name]
          
     def __init__(self):
