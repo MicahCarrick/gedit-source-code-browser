@@ -4,8 +4,7 @@ Gedit Source Code Browser
 A source code class and function browser plugin for Gedit 3. 
 
 * Author: Micah Carrick
-* Version: 3.0.0
-* Date: 2011-05-06
+* Version: 3.0.1
 
 This plugin will add a new tab to the side pane in the Gedit text editor which
 shows symbols (functions, classes, variables, etc.) for the active document. 
@@ -48,6 +47,14 @@ Installation
 4. Activate the plugin in Gedit by choosing 'Edit > Preferences', the selecting
    the 'Plugins' tab, and checking the box next to 'Soucre Code Browser'.
    
+5. (Optional) If you want to enable the configuration dialog you need to compile
+   the settings schema. You must do this as root.
+
+    cd ~/.local/share/gedit/plugins/sourcecodebrowser/data/
+    
+    cp org.gnome.gedit.plugins.sourcecodebrowser.gschema.xml /usr/share/glib-2.0/schemas/
+    
+    glib-compile-schemas /usr/share/glib-2.0/schemas/
 
 Screenshots
 -----------
@@ -58,7 +65,12 @@ Screenshots
 Changes
 -------
 
+**Vesion 3.0.1**
 
+* Added a configuration dialog.
+* Fixed bug where ctags fails to parse filenames with spaces.
+* Fixed bug with unpacking the "signature" field in C code.
+* Added icons for enumerators and typedefs in C code.
 
 Known Issues
 ------------
@@ -72,11 +84,6 @@ Known Issues
   an issue with ctags. There are numerous fixes to be found onn the internet
   such as these 
   [patches for better PHP5 support](http://www.jejik.com/articles/2008/11/patching_exuberant-ctags_for_better_php5_support_in_vim/).
-  
-* A configure dialog has not yet been implemented. Until the configuration dialog
-  is added, a few settings are available for those who want to poke around in 
-  the code. The `__init__` method of the `SourceCodeBrowserPlugin` class contains 
-  a few properties that can be changed.
 
 
 BSD License
@@ -95,7 +102,7 @@ list of conditions and the following disclaimer.
 this list of conditions and the following disclaimer in the documentation 
 and/or other materials provided with the distribution.
     
-* Neither the name of Quixotix Software, LLC nor the names of its 
+* Neither the name of Micah Carrick nor the names of its 
 contributors may be used to endorse or promote products derived from this 
 software without specific prior written permission.
 

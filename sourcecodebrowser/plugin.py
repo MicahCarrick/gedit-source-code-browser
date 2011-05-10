@@ -3,11 +3,11 @@ import sys
 import logging
 import tempfile
 import ctags
-from gi.repository import GObject, GdkPixbuf, Gedit, Gtk
+from gi.repository import GObject, GdkPixbuf, Gedit, Gtk, PeasGtk, Gio
 
 logging.basicConfig()
 LOG_LEVEL = logging.WARN
-
+SETTINGS_SCHEMA = "org.gnome.gedit.plugins.sourcecodebrowser"
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 ICON_DIR = os.path.join(DATA_DIR, 'icons', '16x16')
  
@@ -21,22 +21,7 @@ class SourceTree(Gtk.VBox):
     __gsignals__ = {
         "tag-activated": (GObject.SIGNAL_RUN_FIRST, GObject.TYPE_NONE, (GObject.TYPE_PYOBJECT,)),
     }   
-    def get_pixbuf(self, icon_name):
-        """ 
-        Get the pixbuf for a specific icon name fron an internal dictionary of
-        pixbufs. If the icon is not already in the dictionary, it will be loaded
-        from an external file.        
-        """
-        if icon_name not in self._pixbufs: 
-            filename = os.path.join(ICON_DIR, icon_name + ".png")
-            try:
-                self._pixbufs[icon_name] = GdkPixbuf.Pixbuf.new_from_file(filename)
-            except Exception as e:
-                self._log.warn("Could not load pixbuf for icon '%s': %s", 
-                               icon_name, 
-                               str(e))
-        return self._pixbufs[icon_name]
-         
+    
     def __init__(self):
         Gtk.VBox.__init__(self)
         self._log = logging.getLogger(self.__class__.__name__)
@@ -51,7 +36,25 @@ class SourceTree(Gtk.VBox):
         
         self.create_ui()
         self.show_all()
-    
+        
+    def get_pixbuf(self, icon_name):
+        """ 
+        Get the pixbuf for a specific icon name fron an internal dictionary of
+        pixbufs. If the icon is not already in the dictionary, it will be loaded
+        from an external file.        
+        """
+        if icon_name not in self._pixbufs: 
+            filename = os.path.join(ICON_DIR, icon_name + ".png")
+            try:
+                self._pixbufs[icon_name] = GdkPixbuf.Pixbuf.new_from_file(filename)
+            except Exception as e:
+                self._log.warn("Could not load pixbuf for icon '%s': %s", 
+                               icon_name, 
+                               str(e))
+                self._pixbufs[icon_name] = GdkPixbuf.Pixbuf.new_from_file(
+                                            os.path.join(ICON_DIR, "missing-image.png"))
+        return self._pixbufs[icon_name]
+
     def clear(self):
         """ Clear the tree view so that new data can be loaded. """
         self._store.clear()
@@ -228,7 +231,7 @@ class SourceTree(Gtk.VBox):
         filename to pass to ctags, and the uri is the actual URI as known by
         Gedit. They would be different for remote files.
         """
-        command = "ctags -n --fields=fiKlmnsSzt -f - %s" % path
+        command = "ctags -n --fields=fiKlmnsSzt -f - '%s'" % path
         #self._log.debug(command)
         try:
             parser = ctags.Parser()
@@ -238,8 +241,57 @@ class SourceTree(Gtk.VBox):
                            str(e), 
                            self.ctags_executable)
         self.load(parser.kinds, parser.tags, uri)
+
+class Config(object):
+    def __init__(self):
+        self._log = logging.getLogger(self.__class__.__name__)
+        self._log.setLevel(LOG_LEVEL)
         
-class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable):
+    def get_widget(self, has_schema):
+        filename = os.path.join(DATA_DIR, 'configure_dialog.ui')
+        builder = Gtk.Builder()
+        try:
+            count = builder.add_objects_from_file(filename, ["configure_widget"])
+            assert(count > 0)
+        except Exception as e:
+            self._log.error("Failed to load %s: %s." % (filename, str(e)))
+            return None
+        widget = builder.get_object("configure_widget")
+        widget.set_border_width(12)
+        
+        if not has_schema:
+            widget.set_sensitive(False)
+        else:
+            self._settings = Gio.Settings.new(SETTINGS_SCHEMA)
+            builder.get_object("show_line_numbers").set_active(
+                self._settings.get_boolean('show-line-numbers')
+            )
+            builder.get_object("expand_rows").set_active(
+                self._settings.get_boolean('expand-rows')
+            )
+            builder.get_object("load_remote_files").set_active(
+                self._settings.get_boolean('load-remote-files')
+            )
+            builder.get_object("ctags_executable").set_text(
+                self._settings.get_string('ctags-executable')
+            )
+            builder.connect_signals(self)
+        return widget
+    
+    def on_show_line_numbers_toggled(self, button, data=None):
+        self._settings.set_boolean('show-line-numbers', button.get_active())
+    
+    def on_expand_rows_toggled(self, button, data=None):
+        self._settings.set_boolean('expand-rows', button.get_active())
+    
+    def on_load_remote_files_toggled(self, button, data=None):
+        self._settings.set_boolean('load-remote-files', button.get_active())
+    
+    def on_ctags_executable_changed(self, editable, data=None):
+        self._settings.set_string('ctags-executable', editable.get_text())
+    
+    
+class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable):
     """
     Source Code Browser Plugin for Gedit 3.x
     
@@ -250,26 +302,23 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable):
     """
     __gtype_name__ = "SourceCodeBrowserPlugin"
     window = GObject.property(type=Gedit.Window)
-    
+
     def __init__(self):
         GObject.Object.__init__(self)
         self._log = logging.getLogger(self.__class__.__name__)
         self._log.setLevel(LOG_LEVEL)
         self._ctags_version = None
-        
-        # preferences
-        # TODO: Put preferences into the config dialog
-        self.load_remote_files = True
-        self.ctags_executable = 'ctags'
-        self.show_line_numbers = False
-        self.expand_rows = True
-        
+
         filename = os.path.join(ICON_DIR, "source-code-browser.png")
         self.icon = Gtk.Image.new_from_file(filename)
-
+    
+    def do_create_configure_widget(self):
+        return Config().get_widget(self._has_settings_schema())
+        
     def do_activate(self):
         """ Activate plugin """
         self._log.debug("Activating plugin")
+        self._init_settings()
         self._version_check()
         self._sourcetree = SourceTree()
         self._sourcetree.ctags_executable = self.ctags_executable
@@ -292,9 +341,34 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable):
         pane = self.window.get_side_panel()
         pane.remove_item(self._sourcetree)
     
-    def do_update_state(self):
-        pass
-        
+    def _has_settings_schema(self):
+        schemas = Gio.Settings.list_schemas()
+        if not SETTINGS_SCHEMA in schemas:
+            return False
+        else:
+            return True
+            
+    def _init_settings(self):
+        """ Initialize GSettings if available. """
+        if self._has_settings_schema():
+            settings = Gio.Settings.new(SETTINGS_SCHEMA)
+            self.load_remote_files = settings.get_boolean("load-remote-files")
+            self.show_line_numbers = settings.get_boolean("show-line-numbers")
+            self.expand_rows = settings.get_boolean("expand-rows")
+            self.ctags_executable = settings.get_string("ctags-executable")
+            settings.connect("changed::load-remote-files", self.on_setting_changed)
+            settings.connect("changed::show-line-numbers", self.on_setting_changed)
+            settings.connect("changed::expand-rows", self.on_setting_changed)
+            settings.connect("changed::ctags-executable", self.on_setting_changed)
+            self._settings = settings
+        else:
+            self._log.warn("Settings schema not installed. Plugin will not be configurable.")
+            self._settings = None
+            self.load_remote_files = True
+            self.show_line_numbers = False
+            self.expand_rows = True
+            self.ctags_executable = 'ctags'
+   
     def _load_active_document_symbols(self):
         """ Load the symbols for the given URI. """
         self._sourcetree.clear()
@@ -329,6 +403,28 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable):
         self._log.debug("active-tab-changed")
         self._load_active_document_symbols()
     
+    def on_setting_changed(self, settings, key, data=None):
+        """
+        self.load_remote_files = True
+        self.show_line_numbers = False
+        self.expand_rows = True
+        self.ctags_executable = 'ctags'
+        """
+        if key == 'load-remote-files':
+            self.load_remote_files = self._settings.get_boolean(key)
+        elif key == 'show-line-numbers':
+            self.show_line_numbers = self._settings.get_boolean(key)
+        elif key == 'expand-rows':
+            self.expand_rows = self._settings.get_boolean(key)
+        elif key == 'ctags-executable':
+            self.ctags_executable = self._settings.get_string(key)
+        
+        if self._sourcetree is not None:
+            self._sourcetree.ctags_executable = self.ctags_executable
+            self._sourcetree.show_line_numbers = self.show_line_numbers
+            self._sourcetree.expand_rows = self.expand_rows
+            self._load_active_document_symbols()
+            
     def on_tab_state_changed(self, window, data=None):
         self._log.debug("tab-state-changed")
         self._load_active_document_symbols()
