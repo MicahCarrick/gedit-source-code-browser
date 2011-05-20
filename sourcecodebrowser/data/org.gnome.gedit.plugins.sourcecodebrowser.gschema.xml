@@ -16,6 +16,11 @@
       <summary>Expand Rows</summary>
       <description>Expand the entire source tree when initially loaded.</description>
     </key>
+    <key type="b" name="sort-list">
+      <default>true</default>
+      <summary>Sort List</summary>
+      <description>Sorts the list of symbols alphabetically rather than by where they occur in the source file.</description>
+    </key>
     <key type="s" name="ctags-executable">
       <default>'ctags'</default>
       <summary>Ctags Executable</summary>

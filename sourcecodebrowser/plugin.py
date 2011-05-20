@@ -27,15 +27,24 @@ class SourceTree(Gtk.VBox):
         self._log = logging.getLogger(self.__class__.__name__)
         self._log.setLevel(LOG_LEVEL)
         self._pixbufs = {}
+        self._current_uri = None
         self.expanded_rows = {}
         
         # preferences (should be set by plugin)
         self.show_line_numbers = True
         self.ctags_executable = 'ctags'
         self.expand_rows = True
-        
+        self.sort_list = True
         self.create_ui()
         self.show_all()
+    
+    def get_missing_pixbuf(self):
+        """ Used for symbols that do not have a known image. """
+        if not 'missing' in self._pixbufs:
+            filename = os.path.join(ICON_DIR, "missing-image.png")
+            self._pixbufs['missing'] = GdkPixbuf.Pixbuf.new_from_file(filename)
+        
+        return self._pixbufs['missing']
         
     def get_pixbuf(self, icon_name):
         """ 
@@ -45,18 +54,23 @@ class SourceTree(Gtk.VBox):
         """
         if icon_name not in self._pixbufs: 
             filename = os.path.join(ICON_DIR, icon_name + ".png")
-            try:
-                self._pixbufs[icon_name] = GdkPixbuf.Pixbuf.new_from_file(filename)
-            except Exception as e:
-                self._log.warn("Could not load pixbuf for icon '%s': %s", 
-                               icon_name, 
-                               str(e))
-                self._pixbufs[icon_name] = GdkPixbuf.Pixbuf.new_from_file(
-                                            os.path.join(ICON_DIR, "missing-image.png"))
+            if os.path.exists(filename):
+                try:
+                    self._pixbufs[icon_name] = GdkPixbuf.Pixbuf.new_from_file(filename)
+                except Exception as e:
+                    self._log.warn("Could not load pixbuf for icon '%s': %s", 
+                                   icon_name, 
+                                   str(e))
+                    self._pixbufs[icon_name] = self.get_missing_pixbuf()
+            else:
+                self._pixbufs[icon_name] = self.get_missing_pixbuf()
+                                       
         return self._pixbufs[icon_name]
 
     def clear(self):
         """ Clear the tree view so that new data can be loaded. """
+        if self.expand_rows: 
+            self._save_expanded_rows()
         self._store.clear()
         
     def create_ui(self):
@@ -76,12 +90,9 @@ class SourceTree(Gtk.VBox):
         cell = Gtk.CellRendererText()
         column.pack_start(cell, True)
         column.add_attribute(cell, 'markup', 5)
-        
         self._treeview.append_column(column)
-
+        
         self._treeview.connect("row-activated", self.on_row_activated)
-        self._treeview.connect("row-expanded", self.on_row_expanded)
-        self._treeview.connect("row-collapsed", self.on_row_collapsed)
         
         sw = Gtk.ScrolledWindow()
         sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
@@ -128,6 +139,7 @@ class SourceTree(Gtk.VBox):
         Load the tags into the treeview and restore the expanded rows if 
         applicable.
         """
+        self._current_uri = uri
         # load root-level tags first
         for i, tag in enumerate(tags):
             if "class" not in tag.fields: 
@@ -168,8 +180,9 @@ class SourceTree(Gtk.VBox):
         # classes used in many python projects (eg. Models in Django)
         # Recursion would be even better.
         
-        # sort                                        
-        self._store.set_sort_column_id(1, Gtk.SortType.ASCENDING)
+        # sort         
+        if self.sort_list:                               
+            self._store.set_sort_column_id(1, Gtk.SortType.ASCENDING)
         
         # expand
         if uri in self.expanded_rows:
@@ -198,40 +211,14 @@ class SourceTree(Gtk.VBox):
         line = model.get_value(iter, 4)
         if uri and line:
             self.emit("tag-activated", (uri, line))
-    
-    def on_row_collapsed(self, treeview, iter, path, data=None):
-        """
-        Remove the Gtk.TreePath of the expanded row from dict, so that the
-        expanded rows will not be restored when switching between tabs.
-        """      
-        uri = self._store.get_value(iter, 3)
-        path = str(path)
-        if uri is not None:
-            if uri in self.expanded_rows and path in self.expanded_rows[uri]:
-                self.expanded_rows[uri].remove(path)
-                #self._log.debug("Removing expanded row at %s", path)
 
-    def on_row_expanded(self, treeview, iter, path, data=None):
-        """
-        Save the Gtk.TreePath of the expanded row, as a string, so that the
-        expanded rows can be restored when switching between tabs.
-        """
-        uri = self._store.get_value(iter, 3)
-        path = str(path)
-        if uri is not None:
-            if uri not in self.expanded_rows:
-                self.expanded_rows[uri] = []
-            if path not in self.expanded_rows[uri]:
-                self.expanded_rows[uri].append(path)
-                #self._log.debug("Adding expanded row at %s", path)
-         
     def parse_file(self, path, uri):
         """
         Parse symbols out of a file using exhuberant ctags. The path is the local
         filename to pass to ctags, and the uri is the actual URI as known by
         Gedit. They would be different for remote files.
         """
-        command = "ctags -n --fields=fiKlmnsSzt -f - '%s'" % path
+        command = "ctags -nu --fields=fiKlmnsSzt -f - '%s'" % path
         #self._log.debug(command)
         try:
             parser = ctags.Parser()
@@ -241,7 +228,17 @@ class SourceTree(Gtk.VBox):
                            str(e), 
                            self.ctags_executable)
         self.load(parser.kinds, parser.tags, uri)
-
+    
+    
+    def _save_expanded_rows(self):
+        self.expanded_rows[self._current_uri] = []
+        self._treeview.map_expanded_rows(self._save_expanded_rows_mapping_func, 
+                                         self._current_uri)
+    
+    def _save_expanded_rows_mapping_func(self, treeview, path, uri):
+        self.expanded_rows[uri].append(str(path))
+        
+        
 class Config(object):
     def __init__(self):
         self._log = logging.getLogger(self.__class__.__name__)
@@ -272,6 +269,9 @@ class Config(object):
             builder.get_object("load_remote_files").set_active(
                 self._settings.get_boolean('load-remote-files')
             )
+            builder.get_object("sort_list").set_active(
+                self._settings.get_boolean('sort-list')
+            )
             builder.get_object("ctags_executable").set_text(
                 self._settings.get_string('ctags-executable')
             )
@@ -287,6 +287,9 @@ class Config(object):
     def on_load_remote_files_toggled(self, button, data=None):
         self._settings.set_boolean('load-remote-files', button.get_active())
     
+    def on_sort_list_toggled(self, button, data=None):
+        self._settings.set_boolean('sort-list', button.get_active())
+        
     def on_ctags_executable_changed(self, editable, data=None):
         self._settings.set_string('ctags-executable', editable.get_text())
     
@@ -324,6 +327,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         self._sourcetree.ctags_executable = self.ctags_executable
         self._sourcetree.show_line_numbers = self.show_line_numbers
         self._sourcetree.expand_rows = self.expand_rows
+        self._sourcetree.sort_list = self.sort_list
         panel = self.window.get_side_panel()
         panel.add_item(self._sourcetree, "SymbolBrowserPlugin", "Source Code", self.icon)
         
@@ -355,10 +359,12 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             self.load_remote_files = settings.get_boolean("load-remote-files")
             self.show_line_numbers = settings.get_boolean("show-line-numbers")
             self.expand_rows = settings.get_boolean("expand-rows")
+            self.sort_list = settings.get_boolean("sort-list")
             self.ctags_executable = settings.get_string("ctags-executable")
             settings.connect("changed::load-remote-files", self.on_setting_changed)
             settings.connect("changed::show-line-numbers", self.on_setting_changed)
             settings.connect("changed::expand-rows", self.on_setting_changed)
+            settings.connect("changed::sort-list", self.on_setting_changed)
             settings.connect("changed::ctags-executable", self.on_setting_changed)
             self._settings = settings
         else:
@@ -367,6 +373,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             self.load_remote_files = True
             self.show_line_numbers = False
             self.expand_rows = True
+            self.sort_list = True
             self.ctags_executable = 'ctags'
    
     def _load_active_document_symbols(self):
@@ -400,7 +407,6 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
                         
             
     def on_active_tab_changed(self, window, tab, data=None):
-        self._log.debug("active-tab-changed")
         self._load_active_document_symbols()
     
     def on_setting_changed(self, settings, key, data=None):
@@ -416,6 +422,8 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             self.show_line_numbers = self._settings.get_boolean(key)
         elif key == 'expand-rows':
             self.expand_rows = self._settings.get_boolean(key)
+        elif key == 'sort-list':
+            self.sort_list = self._settings.get_boolean(key)
         elif key == 'ctags-executable':
             self.ctags_executable = self._settings.get_string(key)
         
@@ -423,10 +431,11 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             self._sourcetree.ctags_executable = self.ctags_executable
             self._sourcetree.show_line_numbers = self.show_line_numbers
             self._sourcetree.expand_rows = self.expand_rows
+            self._sourcetree.sort_list = self.sort_list
+            self._sourcetree.expanded_rows = {}
             self._load_active_document_symbols()
             
     def on_tab_state_changed(self, window, data=None):
-        self._log.debug("tab-state-changed")
         self._load_active_document_symbols()
     
     def on_tab_removed(self, window, tab, data=None):

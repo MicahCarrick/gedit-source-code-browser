@@ -4,7 +4,7 @@ Gedit Source Code Browser
 A source code class and function browser plugin for Gedit 3. 
 
 * Author: Micah Carrick
-* Version: 3.0.1
+* Version: 3.0.2
 
 This plugin will add a new tab to the side pane in the Gedit text editor which
 shows symbols (functions, classes, variables, etc.) for the active document. 
@@ -50,7 +50,7 @@ Installation
 5. (Optional) If you want to enable the configuration dialog you need to compile
    the settings schema. You must do this as root.
 
-    cd ~/.local/share/gedit/plugins/sourcecodebrowser/data/
+    cd /home/<YOUR USER NAME>/.local/share/gedit/plugins/sourcecodebrowser/data/
     
     cp org.gnome.gedit.plugins.sourcecodebrowser.gschema.xml /usr/share/glib-2.0/schemas/
     
@@ -64,6 +64,13 @@ Screenshots
 
 Changes
 -------
+
+**Vesion 3.0.2**
+
+* Checks if image exists before trying to instantiate GdkPixbuf
+* Added the option to sort the list alphabetically or allow it to remain in the 
+  same order in which it appears in the source document.
+* Fixed expanding rows between documents by using the row mapping function
 
 **Vesion 3.0.1**
 
@@ -86,8 +93,8 @@ Known Issues
   [patches for better PHP5 support](http://www.jejik.com/articles/2008/11/patching_exuberant-ctags_for_better_php5_support_in_vim/).
 
 
-BSD License
------------
+License
+-------
 
 Copyright (c) 2011, Micah Carrick
 All rights reserved.
