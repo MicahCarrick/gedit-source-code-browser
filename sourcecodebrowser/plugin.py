@@ -310,6 +310,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         GObject.Object.__init__(self)
         self._log = logging.getLogger(self.__class__.__name__)
         self._log.setLevel(LOG_LEVEL)
+        self._is_loaded = False
         self._ctags_version = None
 
         filename = os.path.join(ICON_DIR, "source-code-browser.png")
@@ -328,8 +329,10 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         self._sourcetree.show_line_numbers = self.show_line_numbers
         self._sourcetree.expand_rows = self.expand_rows
         self._sourcetree.sort_list = self.sort_list
+
         panel = self.window.get_side_panel()
         panel.add_item(self._sourcetree, "SymbolBrowserPlugin", "Source Code", self.icon)
+        self._sourcetree.connect("focus", self.on_sourcetree_focus)
         
         if self.ctags_version is not None:
             self._sourcetree.connect('tag-activated', self.on_tag_activated)
@@ -379,8 +382,12 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
     def _load_active_document_symbols(self):
         """ Load the symbols for the given URI. """
         self._sourcetree.clear()
-        #while Gtk.events_pending(): # <-- segfault
-            #Gtk.main_iteration()
+        self._is_loaded = False
+        # do not load if not the active tab in the panel
+        panel = self.window.get_side_panel()
+        if not panel.item_is_active(self._sourcetree):
+            return
+
         document = self.window.get_active_document()
         if document:
             location = document.get_location()
@@ -405,7 +412,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
                         self._sourcetree.parse_file(filename, uri)
                         os.unlink(filename)
                     self._loaded_document = document
-                        
+        self._is_loaded = True
             
     def on_active_tab_changed(self, window, tab, data=None):
         self._load_active_document_symbols()
@@ -435,7 +442,12 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             self._sourcetree.sort_list = self.sort_list
             self._sourcetree.expanded_rows = {}
             self._load_active_document_symbols()
-            
+    
+    def on_sourcetree_focus(self, direction, data=None):
+        if not self._is_loaded:
+            self._load_active_document_symbols()
+        return False
+        
     def on_tab_state_changed(self, window, data=None):
         self._load_active_document_symbols()
     
