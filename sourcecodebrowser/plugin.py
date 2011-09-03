@@ -329,24 +329,32 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         self._sourcetree.show_line_numbers = self.show_line_numbers
         self._sourcetree.expand_rows = self.expand_rows
         self._sourcetree.sort_list = self.sort_list
-
         panel = self.window.get_side_panel()
         panel.add_item(self._sourcetree, "SymbolBrowserPlugin", "Source Code", self.icon)
-        self._sourcetree.connect("focus", self.on_sourcetree_focus)
-        
+        self._handlers = []
+        hid = self._sourcetree.connect("focus", self.on_sourcetree_focus)
+        self._handlers.append((self._sourcetree, hid))
         if self.ctags_version is not None:
-            self._sourcetree.connect('tag-activated', self.on_tag_activated)
-            self.window.connect("active-tab-state-changed", self.on_tab_state_changed)
-            self.window.connect("active-tab-changed", self.on_active_tab_changed)
-            self.window.connect("tab-removed", self.on_tab_removed)
+            hid = self._sourcetree.connect('tag-activated', self.on_tag_activated)
+            self._handlers.append((self._sourcetree, hid))
+            hid = self.window.connect("active-tab-state-changed", self.on_tab_state_changed)
+            self._handlers.append((self.window, hid))
+            hid = self.window.connect("active-tab-changed", self.on_active_tab_changed)
+            self._handlers.append((self.window, hid))
+            hid = self.window.connect("tab-removed", self.on_tab_removed)
+            self._handlers.append((self.window, hid))
         else:
             self._sourcetree.set_sensitive(False)
     
     def do_deactivate(self):
         """ Deactivate the plugin """
         self._log.debug("Deactivating plugin")
+        for obj, hid in self._handlers:
+            obj.disconnect(hid)
+        self._handlers = None
         pane = self.window.get_side_panel()
         pane.remove_item(self._sourcetree)
+        self._sourcetree = None
     
     def _has_settings_schema(self):
         schemas = Gio.Settings.list_schemas()

@@ -61,28 +61,6 @@ Screenshots
 ![Python code in Source Code Browser](http://www.micahcarrick.com/images/gedit-source-code-browser/python.png)
 
 
-Changes
--------
-
-**Vesion 3.0.3**
-
-* Issue #7 - Replaced g_file_get_uri() with g_file_get_parse_name() for unicode 
-  support in calls to ctags.
-
-**Vesion 3.0.2**
-
-* Checks if image exists before trying to instantiate GdkPixbuf
-* Added the option to sort the list alphabetically or allow it to remain in the 
-  same order in which it appears in the source document.
-* Fixed expanding rows between documents by using the row mapping function
-
-**Vesion 3.0.1**
-
-* Added a configuration dialog.
-* Fixed bug where ctags fails to parse filenames with spaces.
-* Fixed bug with unpacking the "signature" field in C code.
-* Added icons for enumerators and typedefs in C code.
-
 Known Issues
 ------------
 
