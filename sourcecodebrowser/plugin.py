@@ -389,7 +389,8 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
                 self._log.debug("Loading %s...", uri)
                 if uri is not None:
                     if uri[:7] == "file://":
-                        filename = uri[7:]
+                        # use get_parse_name() to get path in UTF-8
+                        filename = location.get_parse_name() 
                         self._sourcetree.parse_file(filename, uri)
                     elif self.load_remote_files:
                         basename = location.get_basename()

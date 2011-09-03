@@ -85,7 +85,8 @@ class Parser(object):
         Parse ctags tags from the output of a ctags command. For example:
         ctags -n --fields=fiKmnsSzt -f - some_file.php
         """
-        args = [arg.replace('%20', ' ') for arg in shlex.split(command)] 
+        #args = [arg.replace('%20', ' ') for arg in shlex.split(command)] 
+        args = shlex.split(command)
         p = subprocess.Popen(args, 0, shell=False, stdout=subprocess.PIPE, executable=executable)
         symbols = self._parse_text(p.communicate()[0])
     

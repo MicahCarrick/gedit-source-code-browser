@@ -4,7 +4,6 @@ Gedit Source Code Browser
 A source code class and function browser plugin for Gedit 3. 
 
 * Author: Micah Carrick
-* Version: 3.0.2
 
 This plugin will add a new tab to the side pane in the Gedit text editor which
 shows symbols (functions, classes, variables, etc.) for the active document. 
@@ -64,6 +63,11 @@ Screenshots
 
 Changes
 -------
+
+**Vesion 3.0.3**
+
+* Issue #7 - Replaced g_file_get_uri() with g_file_get_parse_name() for unicode 
+  support in calls to ctags.
 
 **Vesion 3.0.2**
 
