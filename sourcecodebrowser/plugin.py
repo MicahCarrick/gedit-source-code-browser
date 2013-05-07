@@ -11,10 +11,10 @@ SETTINGS_SCHEMA = "org.gnome.gedit.plugins.sourcecodebrowser"
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 ICON_DIR = os.path.join(DATA_DIR, 'icons', '16x16')
 
-LANGUAGE_OVERRIDES = (
-  'PHP',
-  'Python',
-)
+LANGUAGE_OVERRIDES = {
+  'PHP': 'PHP',
+  'Python': 'Python',
+}
  
 class SourceTree(Gtk.VBox):
     """
@@ -409,10 +409,9 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             location = document.get_location()
             if location:
                 uri = location.get_uri()
-                language = document.get_language()
-                if language is not None:
-                  language = language.get_name()
-                if language not in LANGUAGE_OVERRIDES:
+                if document.get_language() is not None:
+                  language = LANGUAGE_OVERRIDES.setdefault(document.get_language().get_name())
+                else:
                   language = None
                 self._log.debug("Loading %s...", uri)
                 if uri is not None:
