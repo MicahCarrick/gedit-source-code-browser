@@ -88,7 +88,7 @@ class Parser(object):
         #args = [arg.replace('%20', ' ') for arg in shlex.split(command)] 
         args = shlex.split(command)
         p = subprocess.Popen(args, 0, shell=False, stdout=subprocess.PIPE, executable=executable)
-        symbols = self._parse_text(p.communicate()[0])
+        symbols = self._parse_text(p.communicate()[0].decode("utf-8"))
     
     def _parse_text(self, text):
         """
