@@ -95,7 +95,7 @@ class Parser(object):
         Parses ctags text which may have come from a TAG file or from raw output
         from a ctags command.
         """
-        for line in text.splitlines():
+        for line in str(text, encoding='utf8').splitlines():
             name = None
             file = None
             ex_command = None
