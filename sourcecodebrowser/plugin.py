@@ -332,7 +332,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         panel = self.window.get_side_panel()
         panel.add_titled(self._sourcetree, "SymbolBrowserPlugin", "Source Code")
         self._handlers = []
-        hid = self._sourcetree.connect("focus", self.on_sourcetree_focus)
+        hid = self._sourcetree.connect("draw", self.on_sourcetree_draw)
         self._handlers.append((self._sourcetree, hid))
         if self.ctags_version is not None:
             hid = self._sourcetree.connect('tag-activated', self.on_tag_activated)
@@ -451,7 +451,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             self._sourcetree.expanded_rows = {}
             self._load_active_document_symbols()
     
-    def on_sourcetree_focus(self, direction, data=None):
+    def on_sourcetree_draw(self, sourcetree, data=None):
         if not self._is_loaded:
             self._load_active_document_symbols()
         return False
