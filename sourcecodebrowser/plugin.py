@@ -11,7 +11,7 @@ SETTINGS_SCHEMA = "org.gnome.gedit.plugins.sourcecodebrowser"
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 ICON_DIR = os.path.join(DATA_DIR, 'icons', '16x16')
  
-class SourceTree(Gtk.VBox):
+class SourceTree(Gtk.Box):
     """
     Source Tree Widget
     
@@ -23,7 +23,8 @@ class SourceTree(Gtk.VBox):
     }   
     
     def __init__(self):
-        Gtk.VBox.__init__(self)
+        Gtk.Box.__init__(self)
+        self.set_orientation(Gtk.Orientation.VERTICAL)
         self._log = logging.getLogger(self.__class__.__name__)
         self._log.setLevel(LOG_LEVEL)
         self._pixbufs = {}
