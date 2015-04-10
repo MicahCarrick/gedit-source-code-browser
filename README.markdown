@@ -36,7 +36,7 @@ Installation
 1. Download this repository by clicking the Downloads button at the top of the 
    github page or issue the following command in a terminal:
 
-    git clone git://github.com/Quixotix/gedit-source-code-browser.git
+  ```git clone git://github.com/toobaz/gedit-source-code-browser.git --depth=1```
 
 2. Copy the file `sourcecodebrowser.plugin` and the folder `sourcecodebrowser` to
    `~/.local/share/gedit/plugins/`.
@@ -49,11 +49,13 @@ Installation
 5. (Optional) If you want to enable the configuration dialog you need to compile
    the settings schema. You must do this as root.
 
+    ```
     cd /home/&lt;YOUR USER NAME&gt;/.local/share/gedit/plugins/sourcecodebrowser/data/
     
     cp org.gnome.gedit.plugins.sourcecodebrowser.gschema.xml /usr/share/glib-2.0/schemas/
     
     glib-compile-schemas /usr/share/glib-2.0/schemas/
+    ```
 
 Screenshots
 -----------
