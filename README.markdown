@@ -50,7 +50,7 @@ Installation
    the settings schema. You must do this as root.
 
     ```
-    cd /home/&lt;YOUR USER NAME&gt;/.local/share/gedit/plugins/sourcecodebrowser/data/
+    cd /home/<YOUR USER NAME>/.local/share/gedit/plugins/sourcecodebrowser/data/
     
     cp org.gnome.gedit.plugins.sourcecodebrowser.gschema.xml /usr/share/glib-2.0/schemas/
     
