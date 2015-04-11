@@ -26,6 +26,10 @@
       <summary>Ctags Executable</summary>
       <description>Specifies the executable path for Exuberant Ctags.</description>
     </key>
+    <key type="s" name="ctags-append">
+      <default>''</default>
+      <summary>Ctags Append</summary>
+      <description>Specifies any command line modifiers to apply to Ctags when run by the parser.</description>
+    </key>
   </schema>
 </schemalist>
-
