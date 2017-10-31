@@ -2,7 +2,7 @@ import os
 import sys
 import logging
 import tempfile
-from sourcecodebrowser import ctags
+import ctags
 from gi.repository import GObject, GdkPixbuf, Gedit, Gtk, PeasGtk, Gio
 
 logging.basicConfig()
@@ -11,7 +11,7 @@ SETTINGS_SCHEMA = "org.gnome.gedit.plugins.sourcecodebrowser"
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 ICON_DIR = os.path.join(DATA_DIR, 'icons', '16x16')
  
-class SourceTree(Gtk.VBox):
+class SourceTree(Gtk.Box):
     """
     Source Tree Widget
     
@@ -23,7 +23,8 @@ class SourceTree(Gtk.VBox):
     }   
     
     def __init__(self):
-        Gtk.VBox.__init__(self)
+        Gtk.Box.__init__(self)
+        self.set_orientation(Gtk.Orientation.VERTICAL)
         self._log = logging.getLogger(self.__class__.__name__)
         self._log.setLevel(LOG_LEVEL)
         self._pixbufs = {}
@@ -330,9 +331,12 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         self._sourcetree.expand_rows = self.expand_rows
         self._sourcetree.sort_list = self.sort_list
         panel = self.window.get_side_panel()
-        panel.add_item(self._sourcetree, "SymbolBrowserPlugin", "Source Code", self.icon)
+        if hasattr(panel,"add_titled"):
+            panel.add_titled(self._sourcetree, "SymbolBrowserPlugin", "Source Code")
+        else:
+            panel.add_item(self._sourcetree, "SymbolBrowserPlugin", "Source Code")
         self._handlers = []
-        hid = self._sourcetree.connect("focus", self.on_sourcetree_focus)
+        hid = self._sourcetree.connect("draw", self.on_sourcetree_draw)
         self._handlers.append((self._sourcetree, hid))
         if self.ctags_version is not None:
             hid = self._sourcetree.connect('tag-activated', self.on_tag_activated)
@@ -353,7 +357,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             obj.disconnect(hid)
         self._handlers = None
         pane = self.window.get_side_panel()
-        pane.remove_item(self._sourcetree)
+        pane.remove(self._sourcetree)
         self._sourcetree = None
     
     def _has_settings_schema(self):
@@ -393,8 +397,6 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         self._is_loaded = False
         # do not load if not the active tab in the panel
         panel = self.window.get_side_panel()
-        if not panel.item_is_active(self._sourcetree):
-            return
 
         document = self.window.get_active_document()
         if document:
@@ -413,7 +415,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
                         contents = document.get_text(document.get_start_iter(),
                                                      document.get_end_iter(),
                                                      True)
-                        os.write(fd, contents)
+                        os.write(fd, bytes(contents, 'UTF-8'))
                         os.close(fd)
                         while Gtk.events_pending():
                             Gtk.main_iteration()
@@ -451,7 +453,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             self._sourcetree.expanded_rows = {}
             self._load_active_document_symbols()
     
-    def on_sourcetree_focus(self, direction, data=None):
+    def on_sourcetree_draw(self, sourcetree, data=None):
         if not self._is_loaded:
             self._load_active_document_symbols()
         return False
