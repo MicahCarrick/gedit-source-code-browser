@@ -1,11 +1,9 @@
 Gedit Source Code Browser
 =========================
 
-![No Maintenance Intended](http://unmaintained.tech/badge.svg)
+![No Longer Maintained](https://img.shields.io/badge/maintained-no-red.svg)
 
 A source code class and function browser plugin for Gedit 3.
-
-* Author: Micah Carrick
 
 This plugin will add a new tab to the side pane in the Gedit text editor which
 shows symbols (functions, classes, variables, etc.) for the active document.
