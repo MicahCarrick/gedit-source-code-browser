@@ -2,7 +2,7 @@ import os
 import sys
 import logging
 import tempfile
-import ctags
+from . import ctags
 from gi.repository import GObject, GdkPixbuf, Gedit, Gtk, PeasGtk, Gio
 
 logging.basicConfig()
