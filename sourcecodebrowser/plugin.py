@@ -3,6 +3,7 @@ import sys
 import logging
 import tempfile
 import ctags
+import completion
 from gi.repository import GObject, GdkPixbuf, Gedit, Gtk, PeasGtk, Gio
 
 logging.basicConfig()
@@ -179,9 +180,9 @@ class SourceTree(Gtk.VBox):
         # TODO: We need to go at least one more level to deal with the inline 
         # classes used in many python projects (eg. Models in Django)
         # Recursion would be even better.
-        
+        self.tags = tags
         # sort         
-        if self.sort_list:                               
+        if self.sort_list:
             self._store.set_sort_column_id(1, Gtk.SortType.ASCENDING)
         
         # expand
@@ -393,8 +394,11 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         self._is_loaded = False
         # do not load if not the active tab in the panel
         panel = self.window.get_side_panel()
+        #Disabled because completion needs the symbols
+        """
         if not panel.item_is_active(self._sourcetree):
             return
+        """
 
         document = self.window.get_active_document()
         if document:
@@ -424,6 +428,10 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             
     def on_active_tab_changed(self, window, tab, data=None):
         self._load_active_document_symbols()
+        
+        if not hasattr(self.window.get_active_view(), "sc_completion"):
+            self.window.get_active_view().get_completion().add_provider(completion.Provider(self._sourcetree))
+            self.window.get_active_view().sc_completion = True
     
     def on_setting_changed(self, settings, key, data=None):
         """
