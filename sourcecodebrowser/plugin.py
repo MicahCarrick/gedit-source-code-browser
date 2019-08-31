@@ -2,13 +2,13 @@ import os
 import sys
 import logging
 import tempfile
-import ctags
+from . import ctags
 from gi.repository import GObject, GdkPixbuf, Gedit, Gtk, PeasGtk, Gio
 
 logging.basicConfig()
 LOG_LEVEL = logging.WARN
 SETTINGS_SCHEMA = "org.gnome.gedit.plugins.sourcecodebrowser"
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+DATA_DIR = "/usr/share/gedit/plugins/sourcecodebrowser"
 ICON_DIR = os.path.join(DATA_DIR, 'icons', '16x16')
  
 class SourceTree(Gtk.VBox):
@@ -33,6 +33,7 @@ class SourceTree(Gtk.VBox):
         # preferences (should be set by plugin)
         self.show_line_numbers = True
         self.ctags_executable = 'ctags'
+        self.ctags_append = ''
         self.expand_rows = True
         self.sort_list = True
         self.create_ui()
@@ -74,7 +75,7 @@ class SourceTree(Gtk.VBox):
         self._store.clear()
         
     def create_ui(self):
-        """ Craete the main user interface and pack into box. """
+        """ Create the main user interface and pack into box. """
         self._store = Gtk.TreeStore(GdkPixbuf.Pixbuf,       # icon
                                     GObject.TYPE_STRING,    # name
                                     GObject.TYPE_STRING,    # kind
@@ -218,7 +219,7 @@ class SourceTree(Gtk.VBox):
         filename to pass to ctags, and the uri is the actual URI as known by
         Gedit. They would be different for remote files.
         """
-        command = "ctags -nu --fields=fiKlmnsSzt -f - '%s'" % path
+        command = "ctags " + self.ctags_append + "-nu --fields=fiKlmnsSzt -f - '%s'" % path
         #self._log.debug(command)
         try:
             parser = ctags.Parser()
@@ -275,6 +276,9 @@ class Config(object):
             builder.get_object("ctags_executable").set_text(
                 self._settings.get_string('ctags-executable')
             )
+            builder.get_object("ctags_append").set_text(
+                self._settings.get_string('ctags-append')
+            )
             builder.connect_signals(self)
         return widget
     
@@ -292,6 +296,9 @@ class Config(object):
         
     def on_ctags_executable_changed(self, editable, data=None):
         self._settings.set_string('ctags-executable', editable.get_text())
+    
+    def on_ctags_append_changed(self, editable, data=None):
+        self._settings.set_string('ctags-append', editable.get_text())
     
     
 class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable):
@@ -326,6 +333,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         self._version_check()
         self._sourcetree = SourceTree()
         self._sourcetree.ctags_executable = self.ctags_executable
+        self._sourcetree.ctags_append = self.ctags_append
         self._sourcetree.show_line_numbers = self.show_line_numbers
         self._sourcetree.expand_rows = self.expand_rows
         self._sourcetree.sort_list = self.sort_list
@@ -372,11 +380,13 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             self.expand_rows = settings.get_boolean("expand-rows")
             self.sort_list = settings.get_boolean("sort-list")
             self.ctags_executable = settings.get_string("ctags-executable")
+            self.ctags_append = settings.get_string("ctags-append")
             settings.connect("changed::load-remote-files", self.on_setting_changed)
             settings.connect("changed::show-line-numbers", self.on_setting_changed)
             settings.connect("changed::expand-rows", self.on_setting_changed)
             settings.connect("changed::sort-list", self.on_setting_changed)
             settings.connect("changed::ctags-executable", self.on_setting_changed)
+            settings.connect("changed::ctags-append", self.on_setting_changed)
             self._settings = settings
         else:
             self._log.warn("Settings schema not installed. Plugin will not be configurable.")
@@ -386,6 +396,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             self.expand_rows = True
             self.sort_list = True
             self.ctags_executable = 'ctags'
+            self.ctags_append = ''
    
     def _load_active_document_symbols(self):
         """ Load the symbols for the given URI. """
@@ -431,6 +442,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         self.show_line_numbers = False
         self.expand_rows = True
         self.ctags_executable = 'ctags'
+        self.ctags_append = ''
         """
         if key == 'load-remote-files':
             self.load_remote_files = self._settings.get_boolean(key)
@@ -442,9 +454,12 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             self.sort_list = self._settings.get_boolean(key)
         elif key == 'ctags-executable':
             self.ctags_executable = self._settings.get_string(key)
+        elif key == 'ctags-append':
+            self.ctags_append = self._settings.get_string(key)
         
         if self._sourcetree is not None:
             self._sourcetree.ctags_executable = self.ctags_executable
+            self._sourcetree.ctags_append = self.ctags_append
             self._sourcetree.show_line_numbers = self.show_line_numbers
             self._sourcetree.expand_rows = self.expand_rows
             self._sourcetree.sort_list = self.sort_list
