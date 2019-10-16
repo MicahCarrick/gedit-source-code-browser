@@ -15,7 +15,7 @@ class SourceTree(Gtk.VBox):
     """
     Source Tree Widget
     
-    A treeview storing the heirarchy of source code symbols within a particular
+    A treeview storing the hierarchy of source code symbols within a particular
     document. Requries exhuberant-ctags.
     """
     __gsignals__ = {
