@@ -398,7 +398,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
 
         document = self.window.get_active_document()
         if document:
-            location = document.get_location()
+            location = document.get_file().get_location()
             if location:
                 uri = location.get_uri()
                 self._log.debug("Loading %s...", uri)
