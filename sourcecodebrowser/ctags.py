@@ -95,12 +95,15 @@ class Parser(object):
         Parses ctags text which may have come from a TAG file or from raw output
         from a ctags command.
         """
+        #print(str(text, 'utf-8'))
         for line in text.splitlines():
             name = None
             file = None
             ex_command = None
             kind = None
-            for i, field in enumerate(line.split("\t")):
+            for i, f in enumerate(line.split(b'\t')):
+               # print(i, f)
+                field = str(f, 'utf-8')
                 if i == 0: tag = Tag(field)
                 elif i == 1: tag.file = field
                 elif i == 2: tag.ex_command = field
@@ -146,4 +149,7 @@ class Parser(object):
         return tree
     """
             
-    
+
+if __name__ == "__main__":
+    the_parser = Parser()
+    the_parser.parse("ctags -nu --fields=fiKlmnsSzt -f - ctags.py", "ctags")

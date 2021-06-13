@@ -1,9 +1,9 @@
 Gedit Source Code Browser
 =========================
 
-![No Longer Maintained](https://img.shields.io/badge/maintained-no-red.svg)
+![Currently Maintained](https://img.shields.io/badge/maintained-yes-brightgreen.svg)
 
-A source code class and function browser plugin for Gedit 3.
+A source code class and function browser plugin for Gedit 40.
 
 This plugin will add a new tab to the side pane in the Gedit text editor which
 shows symbols (functions, classes, variables, etc.) for the active document.
@@ -17,7 +17,7 @@ for a list of the 41 programming languages supported by this plugin.
 Requirements
 ------------
 
-This plugins is for Gedit 3 and is **not compatible with Gedit 2.x**.
+This plugins is for Gedit 40.
 
 The Gedit Source Code Browser plugin uses
 [Exuberant Ctags](http://ctags.sourceforge.net/) to parse symbols
@@ -36,7 +36,7 @@ Installation
 1. Download this repository by clicking the Downloads button at the top of the
    github page or issue the following command in a terminal:
 
-    git clone git://github.com/MicahCarrick/gedit-source-code-browser.git
+    git clone git://github.com/Supreeeme/gedit-source-code-browser.git
 
 2. Copy the file `sourcecodebrowser.plugin` and the folder `sourcecodebrowser` to
    `~/.local/share/gedit/plugins/`.

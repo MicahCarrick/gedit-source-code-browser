@@ -2,8 +2,12 @@ import os
 import sys
 import logging
 import tempfile
-import ctags
+from . import ctags
 from gi.repository import GObject, GdkPixbuf, Gedit, Gtk, PeasGtk, Gio
+
+import gi
+gi.require_version('Tepl', '6')
+from gi.repository import Tepl
 
 logging.basicConfig()
 LOG_LEVEL = logging.WARN
@@ -330,7 +334,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         self._sourcetree.expand_rows = self.expand_rows
         self._sourcetree.sort_list = self.sort_list
         panel = self.window.get_side_panel()
-        panel.add_item(self._sourcetree, "SymbolBrowserPlugin", "Source Code", self.icon)
+        panel.add_titled(self._sourcetree, "SymbolBrowserPlugin", "Source Code")
         self._handlers = []
         hid = self._sourcetree.connect("focus", self.on_sourcetree_focus)
         self._handlers.append((self._sourcetree, hid))
@@ -353,7 +357,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             obj.disconnect(hid)
         self._handlers = None
         pane = self.window.get_side_panel()
-        pane.remove_item(self._sourcetree)
+        pane.remove(self._sourcetree)
         self._sourcetree = None
     
     def _has_settings_schema(self):
@@ -393,12 +397,12 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         self._is_loaded = False
         # do not load if not the active tab in the panel
         panel = self.window.get_side_panel()
-        if not panel.item_is_active(self._sourcetree):
+        if panel.get_visible_child() != self._sourcetree:
             return
 
         document = self.window.get_active_document()
         if document:
-            location = document.get_location()
+            location = document.get_file().get_location()
             if location:
                 uri = location.get_uri()
                 self._log.debug("Loading %s...", uri)
@@ -470,8 +474,8 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         document = self.window.get_active_document()
         view = self.window.get_active_view()
         line = int(line) - 1 # lines start from 0
-        document.goto_line(line)
-        view.scroll_to_cursor()
+       
+        Tepl.View.goto_line(view, line)
         
     def _version_check(self):
         """ Make sure the exhuberant ctags is installed. """
@@ -481,4 +485,4 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
                            (self.ctags_executable))
             
         
-        
+            
