@@ -135,7 +135,7 @@ class Parser(object):
                         if not p in node:
                             node[p] = {'tag':None, 'children':{}}
                         node = node[p]
-                    print node
+                    print(node)
                     node['tag'] = tag                        
                 else:
                     if not parent in self.tree:

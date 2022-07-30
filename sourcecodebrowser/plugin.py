@@ -5,10 +5,12 @@ import tempfile
 from . import ctags
 from gi.repository import GObject, GdkPixbuf, Gedit, Gtk, PeasGtk, Gio
 
-import gi
-gi.require_version('Tepl', '6')
-from gi.repository import Tepl
-
+try:
+    gi.require_version('Tepl', '6')
+    from gi.repository import Tepl
+except:
+    Tepl = None
+    
 logging.basicConfig()
 LOG_LEVEL = logging.WARN
 SETTINGS_SCHEMA = "org.gnome.gedit.plugins.sourcecodebrowser"
@@ -19,7 +21,7 @@ class SourceTree(Gtk.VBox):
     """
     Source Tree Widget
     
-    A treeview storing the heirarchy of source code symbols within a particular
+    A treeview storing the hierarchy of source code symbols within a particular
     document. Requries exhuberant-ctags.
     """
     __gsignals__ = {
@@ -36,6 +38,7 @@ class SourceTree(Gtk.VBox):
         
         # preferences (should be set by plugin)
         self.show_line_numbers = True
+        self.use_bottom_panel = False
         self.ctags_executable = 'ctags'
         self.expand_rows = True
         self.sort_list = True
@@ -78,7 +81,7 @@ class SourceTree(Gtk.VBox):
         self._store.clear()
         
     def create_ui(self):
-        """ Craete the main user interface and pack into box. """
+        """ Create the main user interface and pack into box. """
         self._store = Gtk.TreeStore(GdkPixbuf.Pixbuf,       # icon
                                     GObject.TYPE_STRING,    # name
                                     GObject.TYPE_STRING,    # kind
@@ -119,7 +122,7 @@ class SourceTree(Gtk.VBox):
     def _get_kind_iter(self, kind, uri, parent_iter=None):
         """
         Get the iter for the specified kind. Creates a new node if the iter
-        is not found under the specirfied parent_iter.
+        is not found under the specified parent_iter.
         """
         kind_iter = self._store.iter_children(parent_iter)
         while kind_iter:
@@ -267,6 +270,9 @@ class Config(object):
             builder.get_object("show_line_numbers").set_active(
                 self._settings.get_boolean('show-line-numbers')
             )
+            builder.get_object("use_bottom_panel").set_active(
+                self._settings.get_boolean('use-bottom-panel')
+            )
             builder.get_object("expand_rows").set_active(
                 self._settings.get_boolean('expand-rows')
             )
@@ -276,7 +282,7 @@ class Config(object):
             builder.get_object("sort_list").set_active(
                 self._settings.get_boolean('sort-list')
             )
-            builder.get_object("ctags_executable").set_text(
+            builder.get_object("ctags_executable").set_filename(
                 self._settings.get_string('ctags-executable')
             )
             builder.connect_signals(self)
@@ -284,6 +290,9 @@ class Config(object):
     
     def on_show_line_numbers_toggled(self, button, data=None):
         self._settings.set_boolean('show-line-numbers', button.get_active())
+    
+    def on_use_bottom_panel_toggled(self, button, data=None):
+        self._settings.set_boolean('use-bottom-panel', button.get_active())
     
     def on_expand_rows_toggled(self, button, data=None):
         self._settings.set_boolean('expand-rows', button.get_active())
@@ -294,8 +303,8 @@ class Config(object):
     def on_sort_list_toggled(self, button, data=None):
         self._settings.set_boolean('sort-list', button.get_active())
         
-    def on_ctags_executable_changed(self, editable, data=None):
-        self._settings.set_string('ctags-executable', editable.get_text())
+    def on_ctags_executable_changed(self, button, data=None):
+        self._settings.set_string('ctags-executable', button.get_filename())
     
     
 class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable):
@@ -331,12 +340,12 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         self._sourcetree = SourceTree()
         self._sourcetree.ctags_executable = self.ctags_executable
         self._sourcetree.show_line_numbers = self.show_line_numbers
+        self._sourcetree.use_bottom_panel = self.use_bottom_panel
         self._sourcetree.expand_rows = self.expand_rows
         self._sourcetree.sort_list = self.sort_list
-        panel = self.window.get_side_panel()
-        panel.add_titled(self._sourcetree, "SymbolBrowserPlugin", "Source Code")
+        self._insert_sourcetree_pane()
         self._handlers = []
-        hid = self._sourcetree.connect("focus", self.on_sourcetree_focus)
+        hid = self._sourcetree.connect("focus" if Tepl else "draw", self.on_sourcetree_focus)
         self._handlers.append((self._sourcetree, hid))
         if self.ctags_version is not None:
             hid = self._sourcetree.connect('tag-activated', self.on_tag_activated)
@@ -349,15 +358,33 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             self._handlers.append((self.window, hid))
         else:
             self._sourcetree.set_sensitive(False)
-    
+
+    def _insert_sourcetree_pane(self):
+        if self._sourcetree.use_bottom_panel:
+            panel = self.window.get_bottom_panel()
+            panel.add_titled(self._sourcetree, "SymbolBrowserPlugin", "Source Tags")
+            panel.show()
+            self._sourcetree.show_all()
+            panel.set_visible_child(self._sourcetree)
+        else:
+            panel = self.window.get_side_panel()
+            panel.add_titled(self._sourcetree, "SymbolBrowserPlugin", "Source Code")
+
+    def _remove_sourcetree_pane(self):
+        if self._sourcetree.use_bottom_panel:
+            panel = self.window.get_bottom_panel()
+            panel.remove(self._sourcetree)
+        else:
+            panel = self.window.get_side_panel()
+            panel.remove(self._sourcetree)
+
     def do_deactivate(self):
         """ Deactivate the plugin """
         self._log.debug("Deactivating plugin")
         for obj, hid in self._handlers:
             obj.disconnect(hid)
         self._handlers = None
-        pane = self.window.get_side_panel()
-        pane.remove(self._sourcetree)
+        self._remove_sourcetree_pane()
         self._sourcetree = None
     
     def _has_settings_schema(self):
@@ -373,11 +400,13 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             settings = Gio.Settings.new(SETTINGS_SCHEMA)
             self.load_remote_files = settings.get_boolean("load-remote-files")
             self.show_line_numbers = settings.get_boolean("show-line-numbers")
+            self.use_bottom_panel = settings.get_boolean("use-bottom-panel")
             self.expand_rows = settings.get_boolean("expand-rows")
             self.sort_list = settings.get_boolean("sort-list")
             self.ctags_executable = settings.get_string("ctags-executable")
             settings.connect("changed::load-remote-files", self.on_setting_changed)
             settings.connect("changed::show-line-numbers", self.on_setting_changed)
+            settings.connect("changed::use-bottom-panel", self.on_setting_changed)
             settings.connect("changed::expand-rows", self.on_setting_changed)
             settings.connect("changed::sort-list", self.on_setting_changed)
             settings.connect("changed::ctags-executable", self.on_setting_changed)
@@ -387,6 +416,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             self._settings = None
             self.load_remote_files = True
             self.show_line_numbers = False
+            self.use_bottom_panel = False
             self.expand_rows = True
             self.sort_list = True
             self.ctags_executable = 'ctags'
@@ -396,7 +426,12 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         self._sourcetree.clear()
         self._is_loaded = False
         # do not load if not the active tab in the panel
-        panel = self.window.get_side_panel()
+        if self._sourcetree.use_bottom_panel:
+            panel = self.window.get_bottom_panel()
+            visible_child = panel.get_visible_child()
+            panel.props.visible_child = self._sourcetree
+        else:
+            panel = self.window.get_side_panel()
         if panel.get_visible_child() != self._sourcetree:
             return
 
@@ -425,6 +460,8 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
                         os.unlink(filename)
                     self._loaded_document = document
         self._is_loaded = True
+        if self._sourcetree.use_bottom_panel and visible_child != self._sourcetree:
+            panel.props.visible_child = visible_child
             
     def on_active_tab_changed(self, window, tab, data=None):
         self._load_active_document_symbols()
@@ -433,6 +470,7 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         """
         self.load_remote_files = True
         self.show_line_numbers = False
+        self.use_bottom_panel = False
         self.expand_rows = True
         self.ctags_executable = 'ctags'
         """
@@ -440,6 +478,8 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
             self.load_remote_files = self._settings.get_boolean(key)
         elif key == 'show-line-numbers':
             self.show_line_numbers = self._settings.get_boolean(key)
+        elif key == 'use-bottom-panel':
+            self.use_bottom_panel = self._settings.get_boolean(key)
         elif key == 'expand-rows':
             self.expand_rows = self._settings.get_boolean(key)
         elif key == 'sort-list':
@@ -450,6 +490,9 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         if self._sourcetree is not None:
             self._sourcetree.ctags_executable = self.ctags_executable
             self._sourcetree.show_line_numbers = self.show_line_numbers
+            self._remove_sourcetree_pane()
+            self._sourcetree.use_bottom_panel = self.use_bottom_panel
+            self._insert_sourcetree_pane()
             self._sourcetree.expand_rows = self.expand_rows
             self._sourcetree.sort_list = self.sort_list
             self._sourcetree.expanded_rows = {}
@@ -474,8 +517,11 @@ class SourceCodeBrowserPlugin(GObject.Object, Gedit.WindowActivatable, PeasGtk.C
         document = self.window.get_active_document()
         view = self.window.get_active_view()
         line = int(line) - 1 # lines start from 0
-       
-        Tepl.View.goto_line(view, line)
+        if Tepl:
+            Tepl.View.goto_line(view, line)
+        else:
+            document.goto_line(line)
+            view.scroll_to_cursor()
         
     def _version_check(self):
         """ Make sure the exhuberant ctags is installed. """
