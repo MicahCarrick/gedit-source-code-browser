@@ -3,6 +3,7 @@ import sys
 import logging
 import tempfile
 from . import ctags
+import gi
 from gi.repository import GObject, GdkPixbuf, Gedit, Gtk, PeasGtk, Gio
 
 try:
