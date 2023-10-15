@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema id="org.gnome.gedit.plugins.sourcecodebrowser" path="/org/gnome/gedit/plugins/sourcecodebrowser/">
+    <key type="b" name="use-bottom-panel">
+      <default>true</default>
+      <summary>Use bottom panel</summary>
+      <description>Use the bottom panel for the source tree.</description>
+    </key>
     <key type="b" name="show-line-numbers">
       <default>false</default>
       <summary>Show Line Numbers</summary>

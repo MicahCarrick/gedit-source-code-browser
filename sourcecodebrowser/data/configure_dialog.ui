@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.22.2 -->
 <interface>
-  <!-- interface-requires gtk+ 3.0 -->
+  <requires lib="gtk+" version="3.0"/>
   <object class="GtkDialog" id="configure_dialog">
     <property name="can_focus">False</property>
     <property name="border_width">5</property>
@@ -8,6 +9,9 @@
     <property name="type_hint">dialog</property>
     <property name="skip_taskbar_hint">True</property>
     <property name="skip_pager_hint">True</property>
+    <child type="titlebar">
+      <placeholder/>
+    </child>
     <child internal-child="vbox">
       <object class="GtkBox" id="dialog-vbox1">
         <property name="can_focus">False</property>
@@ -20,10 +24,10 @@
             <child>
               <object class="GtkButton" id="button1">
                 <property name="label">gtk-close</property>
+                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="use_action_appearance">False</property>
                 <property name="use_stock">True</property>
               </object>
               <packing>
@@ -46,12 +50,31 @@
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
             <child>
-              <object class="GtkCheckButton" id="show_line_numbers">
-                <property name="label" translatable="yes">Show _line numbers in tree</property>
+              <object class="GtkCheckButton" id="use_bottom_panel">
+                <property name="label" translatable="yes">Use _bottom panel</property>
+                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
+                <property name="use_underline">True</property>
+                <property name="xalign">0</property>
+                <property name="draw_indicator">True</property>
+                <signal name="toggled" handler="on_use_bottom_panel_toggled" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="padding">6</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkCheckButton" id="show_line_numbers">
+                <property name="label" translatable="yes">Show _line numbers in tree</property>
                 <property name="use_action_appearance">False</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
                 <property name="use_underline">True</property>
                 <property name="xalign">0</property>
                 <property name="draw_indicator">True</property>
@@ -67,10 +90,10 @@
             <child>
               <object class="GtkCheckButton" id="load_remote_files">
                 <property name="label" translatable="yes">Load symbols from _remote files</property>
+                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
-                <property name="use_action_appearance">False</property>
                 <property name="use_underline">True</property>
                 <property name="xalign">0</property>
                 <property name="draw_indicator">True</property>
@@ -86,10 +109,10 @@
             <child>
               <object class="GtkCheckButton" id="expand_rows">
                 <property name="label" translatable="yes">Start with rows _expanded</property>
+                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
-                <property name="use_action_appearance">False</property>
                 <property name="use_underline">True</property>
                 <property name="xalign">0</property>
                 <property name="draw_indicator">True</property>
@@ -105,10 +128,10 @@
             <child>
               <object class="GtkCheckButton" id="sort_list">
                 <property name="label" translatable="yes">_Sort list alphabetically</property>
+                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
-                <property name="use_action_appearance">False</property>
                 <property name="use_underline">True</property>
                 <property name="xalign">0</property>
                 <property name="draw_indicator">True</property>
@@ -124,13 +147,15 @@
             <child>
               <object class="GtkBox" id="box3">
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
+                <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
                 <child>
                   <object class="GtkLabel" id="label1">
                     <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="xalign">0</property>
+                    <property name="can_focus">True</property>
+                    <property name="xpad">5</property>
                     <property name="label" translatable="yes">ctags executable</property>
+                    <property name="xalign">0</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -139,18 +164,16 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkEntry" id="ctags_executable">
+                  <object class="GtkFileChooserButton" id="ctags_executable">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="invisible_char">●</property>
-                    <property name="text" translatable="yes">ctags</property>
-                    <property name="invisible_char_set">True</property>
-                    <signal name="changed" handler="on_ctags_executable_changed" swapped="no"/>
+                    <property name="hexpand">True</property>
+                    <property name="title" translatable="yes"/>
+                    <signal name="selection-changed" handler="on_ctags_executable_changed" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">True</property>
-                    <property name="padding">6</property>
                     <property name="position">1</property>
                   </packing>
                 </child>
@@ -159,6 +182,7 @@
                 <property name="expand">False</property>
                 <property name="fill">True</property>
                 <property name="padding">6</property>
+                <property name="pack_type">end</property>
                 <property name="position">4</property>
               </packing>
             </child>
